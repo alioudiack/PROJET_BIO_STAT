@@ -55,7 +55,15 @@ def split(df_transformed):
     X = df_transformed.drop("Evolution", axis=1)
     X_train, X_test, y_train, y_test = tts(X, y, test_size=0.3, random_state=1) 
     return X_train, X_test, y_train, y_test
-   
+# normalisation
+#copy des données train/test
+X_train_scaled = X_train.copy()
+X_test_scaled = X_test.copy()
+#transformation des données d'entrainement
+numCols = data.select_dtypes(include = np.number).columns.tolist()
+X_train_scaled.loc[: , numCols] = scaler.fit_transform(X_train_scaled[numCols])
+#transformation des données de test
+X_test_scaled.loc[: , numCols] = scaler.transform(X_test_scaled[numCols])
 # Fonction principale
 def main():
     st.title("Etude pronostique de Décès aprés le traitement")
@@ -70,7 +78,7 @@ def main():
     df_transformed = transform_variables(df)
 
     # Séparation des données
-    X_train, X_test, y_train, y_test = split(df_transformed)
+    X_train_scaled, X_test_scaled, y_train, y_test = split(df_transformed)
 
     # Charger le modèle pré-entraîné
     model = None
@@ -82,7 +90,7 @@ def main():
 
     if model:
         # Prédictions
-        y_pred = model.predict(X_test)
+        y_pred = model.predict(X_test_scaled)
 
         # Calculer les métriques de performance
         accuracy = accuracy_score(y_test, y_pred)
@@ -103,7 +111,7 @@ def main():
         execute = st.sidebar.button("Affichez les Graphiques")
 
         if execute:
-            plot_perf(graphes_perf, model, X_test, y_test)
+            plot_perf(graphes_perf, model, X_test_scaled, y_test)
 
     # Formulaire pour les données du patient
     st.sidebar.header("Prédiction pour un Nouveau Patient")
@@ -156,6 +164,7 @@ def main():
 
     # Assurez-vous que les colonnes de new_data_df sont dans le même ordre que celles de X_train
     new_data_df = new_data_df[X_train.columns]
+    new_data_df.loc[: , numCols] = scaler.fit_transform(new_data_df[numCols])
     # Bouton pour afficher le résultat de la prédiction
     if st.sidebar.button("Résultat de la Prédiction"):
         prediction = model.predict(new_data_df)[0]
